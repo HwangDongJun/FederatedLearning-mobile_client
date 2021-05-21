@@ -1,0 +1,304 @@
+package com.example.test_deeplearning4j;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+
+import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.data.LineDataSet;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import io.socket.client.IO;
+import io.socket.client.Socket;
+import io.socket.emitter.Emitter;
+
+public class MainActivity extends AppCompatActivity {
+    private ExecutorService executor;
+    private LineChart mChart;
+    private TextView stepText;
+    private TextView logArea;
+    private static final String TAG = "FederatedActivity";
+    private String mUsername;
+    Handler handler = null;
+    private String clientID;
+    private CNNModel cnn_model;
+    private Socket mSocket;
+    private OkHttpClient client = new OkHttpClient();
+    private int currentRound = 0;
+
+    {
+        try {
+            IO.Options opts = new IO.Options();
+            opts.reconnection = true;
+
+            mSocket = IO.socket("http://192.168.1.56:8891", opts);
+            //mSocket = IO.socket("http://192.168.0.4:8891", opts);
+            mSocket.io().timeout(-1);
+        } catch (URISyntaxException e) {
+            Log.e(TAG, "onCreate: " + e.toString());
+        }
+    }
+
+    List<Entry> entryList = new ArrayList<>();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        mChart = findViewById(R.id.chart);
+        stepText = findViewById(R.id.step);
+        logArea = findViewById(R.id.log_area);
+
+        Button startManualBtn = findViewById(R.id.btn_start_manual);
+        Button startAutoBtn = findViewById(R.id.btn_start_auto);
+        Button preProcessBtn = findViewById(R.id.btn_preprocess);
+
+        mChart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
+        mChart.getAxisRight().setEnabled(false);
+        mChart.getDescription().setEnabled(false);
+        entryList.add(new Entry(0, 0));
+        LineDataSet lineDataSet = new LineDataSet(entryList, "loss");
+        LineData lineData = new LineData(lineDataSet);
+        mChart.setData(lineData);
+
+        executor = Executors.newSingleThreadExecutor();
+
+        preProcessBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mUsername = "android_" + Math.floor((Math.random() * 1000) + 1);
+//                mSocket.on(Socket.EVENT_CONNECT, onConnect);
+//                mSocket.on(Socket.EVENT_DISCONNECT, onDisConnect);
+//                mSocket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
+//                mSocket.on("chatevent", onNewMessage);
+//                mSocket.on("init", onInit);
+//                mSocket.on("request_update", onRequestUpdate);
+////                mSocket.on("stop_and_eval", onStopAndEval);
+//                mSocket.connect();
+            }
+        });
+
+        startManualBtn.setOnClickListener(v -> {
+//            mSocket.emit("client_wake_up");
+            logArea.append("send wake up \n");
+        });
+
+        handler = new Handler(msg -> {
+            Bundle bundle = msg.getData();
+            String str = bundle.getString("data");
+            logArea.append(str + "\n");
+            return false;
+        });
+    }
+
+    private Emitter.Listener onConnect = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            Message msg = new Message();
+            Bundle bundle = new Bundle();
+            bundle.putString("data", "connect to server");
+            msg.setData(bundle);
+            handler.sendMessage(msg);
+        }
+    };
+
+    private Emitter.Listener onConnectError = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            Exception err = (Exception) args[0];
+            Message msg = new Message();
+            Bundle bundle = new Bundle();
+            bundle.putString("data", "connect error");
+            msg.setData(bundle);
+            handler.sendMessage(msg);
+            Log.d(TAG, "onCreate: connect error" + err.getMessage());
+            // err.printStackTrace();
+        }
+    };
+
+    private Emitter.Listener onDisConnect = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            Message msg = new Message();
+            Bundle bundle = new Bundle();
+            bundle.putString("data", "disconnect to server");
+            msg.setData(bundle);
+            handler.sendMessage(msg);
+        }
+    };
+
+    private Emitter.Listener onNewMessage = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            JSONObject data = (JSONObject) args[0];
+            try {
+                String username = data.getString("userName");
+                String message = data.getString("message");
+
+                String msgFromServer = "user_" + username + " : " + message;
+                Log.d(TAG, "onCreate: received from server: " + msgFromServer);
+                Message msg = new Message();
+                Bundle bundle = new Bundle();
+                bundle.putString("data", msgFromServer);
+                msg.setData(bundle);
+                handler.sendMessage(msg);
+            } catch (
+                    JSONException e) {
+                Log.e(TAG, e.toString());
+            }
+        }
+    };
+
+    private Emitter.Listener onInit = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            JsonParser parser = new JsonParser();
+            JsonElement clientInitObject = parser.parse(args[0].toString());
+
+            try {
+//                Log.d("init image size ", clientInitObject.getAsJsonObject().get("image_size").getAsString());
+//                Log.d("init batch size ", clientInitObject.getAsJsonObject().get("batch_size").getAsString());
+//                Log.d("init epochs ", clientInitObject.getAsJsonObject().get("epochs").getAsString());
+//                Log.d("init learning rate ", clientInitObject.getAsJsonObject().get("learning_rate").getAsString());
+
+                // file download from url
+                String Model_url = clientInitObject.getAsJsonObject().get("model_url").getAsString();
+                String Output_file_path = "/storage/self/primary/Download/save_model";
+                File check_file = new File(Output_file_path);
+
+                if(!check_file.exists()) {
+                    boolean success = check_file.mkdir();
+                }
+
+                cnn_model = new CNNModel();
+                // model download from server url
+//                cnn_model.downloadTo(new URL(Model_url), check_file, true);
+                // model build
+//                cnn_model.buildModel(Output_file_path);
+
+                String msgFromServer = "client init model";
+
+                Message msg = new Message();
+                Bundle bundle = new Bundle(); // 여러가지의 타입의 값을 저장하는 Map 클래스
+                bundle.putString("data", msgFromServer);
+                msg.setData(bundle);
+                handler.sendMessage(msg); // 다양한 스레드 통신 방법 중 핸들러(Handler)를 통해 메시지(Message)를 전달
+
+                Integer trainSize = 468;
+
+                JSONObject resp = new JSONObject();
+                try {
+                    resp.put("trainSize", trainSize);
+                } catch (JSONException e) {
+                    Log.e(TAG, "onInit: " + e.getMessage());
+                }
+
+                Log.d(TAG, "call: init rest");
+                mSocket.emit("client_ready", resp);
+            } catch (Exception e) {
+                Log.e(TAG, e.toString());
+            }
+        }
+    };
+
+    private void trainOneRound(int currentRound, String upload_url, int client_index) {
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "execute: train start!");
+                try {
+                    cnn_model.train(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                Log.d(TAG, "run: train finish!");
+
+                // save trained model
+                String model_name = "client_model_" + Integer.toString(client_index) + ".h5";
+                String AndroidModelPath = "/storage/self/primary/Download/save_model/";
+                cnn_model.saveModel(AndroidModelPath + model_name);
+                // upload to server trained model
+                cnn_model.uploadTo(AndroidModelPath, upload_url);
+
+                JSONObject resp = new JSONObject();
+
+                try {
+                    resp.put("currentRound", currentRound);
+                    resp.put("modelName", model_name);
+                } catch (JSONException e) {
+                    Log.e(TAG, "onRequestUpdate: " + e.getMessage());
+                }
+
+                Log.d(TAG, "run: have a rest");
+                mSocket.emit("client_update", resp);
+            }
+        });
+    }
+
+    private Emitter.Listener onRequestUpdate = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            JsonParser parser = new JsonParser();
+            JsonElement requestUpdateObj = parser.parse(args[0].toString());
+
+            try {
+                int client_index = requestUpdateObj.getAsJsonObject().get("client_index").getAsInt();
+                currentRound = requestUpdateObj.getAsJsonObject().get("currentRound").getAsInt();
+                // file upload to server
+                String Upload_url = requestUpdateObj.getAsJsonObject().get("upload_url").getAsString();
+                // file download from url
+                String Model_url = requestUpdateObj.getAsJsonObject().get("model_url").getAsString();
+                String Output_file_path = "/storage/self/primary/Download/save_model";
+                File check_file = new File(Output_file_path);
+
+                // model download from server url
+                cnn_model.downloadTo(new URL(Model_url), check_file, true);
+                // model build
+                cnn_model.buildModel(Output_file_path);
+
+                double testLoss = requestUpdateObj.getAsJsonObject().get("eval_loss").getAsDouble();
+                double testAcc = requestUpdateObj.getAsJsonObject().get("eval_accuracy").getAsDouble();
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        String msg = "global acc: " + testAcc + "\n";
+                        logArea.append(msg);
+                        stepText.setText(getString(R.string.current_round, currentRound));
+//                        addEntry(currentRound, testAcc);
+                    }
+                });
+
+                trainOneRound(currentRound, Upload_url, client_index);
+
+            } catch (IOException e) {
+                Log.e(TAG, e.toString());
+            }
+        }
+    };
+}

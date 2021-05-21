@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">LocationDemo</string>
+    <string name="button">Button</string>
+    <string name="monitor" />
+
+    <string name="banner">Draw number below (0 through 9)</string>
+    <string name="Predicted">Predicted</string>
+    <string name="Drawn">Drawn</string>
+    <string name="Confidence">Confidence</string>
+    <string name="value_0">0</string>
+    <string name="Processing...">Processing...</string>
+
+    <string name="log_message_hint">Syft will tell you what happens in this area</string>
+    <string name="title_activity_base_u_r_l">FullscreenActivity</string>
+    <string name="submit">Submit</string>
+    <string name="start_background">Start Background</string>
+    <string name="start_foreground">Start Foreground</string>
+    <string name="close_background">Close Background</string>
+    <string name="pre_process">Pre Process</string>
+    <string name="start_manually">Start (Manual)</string>
+    <string name="start_automatically">Start (Automatic)</string>
+    <string name="enter_url">Enter PyGrid server URL:</string>
+    <string name="error_url">url is not valid</string>
+    <string name="title_activity_work_info">Running Job Info</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="current_round">Round: %1$d</string>
+
+    <string name="hello_first_fragment">Hello first fragment</string>
+    <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+    <string name="Address">address</string>
+    <string name="ClientAddress">address</string>
+</resources>

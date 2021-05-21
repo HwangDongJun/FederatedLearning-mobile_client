@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <!--    页面背景颜色-->
+    <color name="sp_color_bg_primary">#E1F5FE</color>
+    <!--    弹窗背景颜色-->
+    <color name="sp_bg_dialog_main">#E1F5FE</color>
+    <!--    三级文字颜色-->
+    <color name="sp_txt_auxiliary">#313133</color>
+    <!--    二级文字颜色-->
+    <color name="sp_txt_subtitle">#313133</color>
+    <!--    一级文字颜色-->
+    <color name="sp_txt_title">#141414</color>
+    <!--    分割线颜色-->
+    <color name="sp_divider">#ADAEB8</color>
+    <!--    toolbar图标颜色-->
+    <color name="sp_ic_toolbar_icon">#141414</color>
+    <!--    活跃按钮文本颜色-->
+    <color name="sp_colorAccent">#F48FB1</color>
+    <!--    表盘背景颜色-->
+    <color name="sp_color_dv_bg_color">#ADAEB8</color>
+    <!--    主下载色-->
+    <color name="sp_main_download">#F06292</color>
+    <!--    主上传色-->
+    <color name="sp_main_upload">#FF8A65</color>
+    <!--    测速表格线颜色-->
+    <color name="sp_speed_grid_color">#C5C4C4</color>
+
+    <!--    <color name="colorPrimary">#3F51B5</color>-->
+    <!--    <color name="colorPrimaryDark">#303F9F</color>-->
+    <!--    <color name="colorAccent">#FF4081</color>-->
+    <color name="colorBlack">#000000</color>
+    <color name="colorwhite">#FFFF</color>
+
+    <color name="colorPrimaryGreen">#00bfff</color>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <color name="colorPrimary">#333</color>
+    <color name="colorPrimaryDark">#111</color>
+    <color name="colorAccent">#F14242</color>
+
+    <color name="black_overlay">#66000000</color>
+    <color name="green_tint">#9E11C553</color>
+    <color name="red">#F14242</color>
+</resources>
