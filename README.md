@@ -8,3 +8,5 @@
 ![1round training](./img/1round.png)
 
 ![round training scheduling](./img/1round->2round.png)
+
+- gRPC로도 구현을 해보고 싶다... 
