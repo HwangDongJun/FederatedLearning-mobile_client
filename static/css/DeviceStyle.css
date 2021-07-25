@@ -1,0 +1,88 @@
+.menu_bar {
+	height: 80px;
+	max-width: 100%;
+	background-color: #C8C8C7;
+	border: 0;
+	margin-bottom: 10px;
+}
+
+@import url(https://fonts.googleapis.com/css?family=BechNine:700);
+.menu_button {
+	background-color: #c47135;
+	border: none;
+	color: #ffffff;
+	cursor: pointer;
+	display: inline-block;
+	font-family: 'BechNine', Arial, sans-serif;
+	font-size: 1em;
+	font-size: 22px;
+	line-height: 1em;
+	margin: 15px 40px;
+	outline: none;
+	padding: 12px 40px 10px;
+	position: relative;
+	text-transform: uppercase;
+	font-weight: 700;
+}
+.menu_button:before,
+.menu_button:after {
+	border-color: transparent;
+	-webkit-transition: all 0.25s;
+	transition: all 0.25s;
+	border-style: solid;
+	border-width: 0;
+	content: "";
+	height: 24px;
+	position: absolute;
+	width: 24px;
+}
+.menu_button:before {
+	border-color: #c47135;
+	border-right-width: 2px;
+	border-top-width: 2px;
+	right: -5px;
+	top: -5px;
+}
+.menu_button:after {
+	border-bottom-width: 2px;
+	border-color: #c47135;
+	border-left-width: 2px;
+	bottom: -5px;
+	left: -5px;
+}
+.menu_button:hover,
+.menu_button.hover {
+	background-color: #c47135;
+}
+.menu_button:hover:before,
+.menu_button.hover:before,
+.menu_button:hover:after,
+.menu_button.hover:after {
+	height: 100%;
+	width: 100%;
+}
+
+#wifi_img {
+	height: 30px;
+	width: 50px;
+	float: right;
+	position: relative;
+	top: 30%;
+}
+#wifi_info {
+	margin-right: 10px;
+	float: right;
+}
+
+#heapsize_div, #temperature_div, #cpu_freq_div {
+	width: 50%;
+}
+#heapsize_div {
+	float: right;
+}
+#temperature_div {
+	float: left;
+}
+#cpu_freq_div {
+	float: left;
+}

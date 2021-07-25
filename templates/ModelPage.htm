@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title> FL Dashboard Model Page </title>
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+	<!-- <link rel="stylesheet" type="text/css" href="../static/css/main.css"> -->
+
+	<style>
+		.menu_bar {
+			height: 80px;
+			max-width: 100%;
+			background-color: #C8C8C7;
+			border: 0;
+			margin-bottom: 10px;
+		}
+		
+		@import url(https://fonts.googleapis.com/css?family=BechNine:700);
+		.menu_button {
+			background-color: #c47135;
+			border: none;
+			color: #ffffff;
+			cursor: pointer;
+			display: inline-block;
+			font-family: 'BechNine', Arial, sans-serif;
+			font-size: 1em;
+			font-size: 22px;
+			line-height: 1em;
+			margin: 15px 40px;
+			outline: none;
+			padding: 12px 40px 10px;
+			position: relative;
+			text-transform: uppercase;
+			font-weight: 700;
+		}
+		.menu_button:before,
+		.menu_button:after {
+			border-color: transparent;
+			-webkit-transition: all 0.25s;
+			transition: all 0.25s;
+			border-style: solid;
+			border-width: 0;
+			content: "";
+			height: 24px;
+			position: absolute;
+			width: 24px;
+		}
+		.menu_button:before {
+			border-color: #c47135;
+			border-right-width: 2px;
+			border-top-width: 2px;
+			right: -5px;
+			top: -5px;
+		}
+		.menu_button:after {
+			border-bottom-width: 2px;
+			border-color: #c47135;
+			border-left-width: 2px;
+			bottom: -5px;
+			left: -5px;
+		}
+		.menu_button:hover,
+		.menu_button.hover {
+			background-color: #c47135;
+		}
+		.menu_button:hover:before,
+		.menu_button.hover:before,
+		.menu_button:hover:after,
+		.menu_button.hover:after {
+			height: 100%;
+			width: 100%;
+		}
+
+		#wifi_img {
+			height: 30px;
+			width: 50px;
+			float: right;
+			position: relative;
+			top: 30%;
+		}
+		#wifi_info {
+			margin-right: 10px;
+			float: right;
+		}
+
+		.btn {
+			border: 2px solid gray;
+			color: gray;
+			background-color: white;
+			padding: 8px 20px;
+			border-radius: 8px;
+			font-size: 20px;
+			font-weight: bold;
+		}
+
+		input[type=submit] {
+			font-size: 100px;
+			position: absolute;
+			left: 0;
+			top: 0;
+			opacity: 0;
+		}
+
+		#file_upload_img {
+			width: 1300px;
+			height: 700px;
+		}
+	</style>
+
+	<script type="text/javascript" src="//code.jquery.com/jquery.min.js"></script>
+	<script>
+		$(document).ready(function() {
+			//let timerId = setInterval(() => location.reload(), 2000);
+
+			$('#client_info').on('click', function(e) {
+				e.preventDefault();
+				window.location.href='http://localhost:8891/dashboard';
+			});
+
+			$('#train_info').on('click', function(e) {
+				e.preventDefault();
+				window.location.href='http://localhost:8891/traininfo';
+			});
+
+			$('#device_info').on('click', function(e) {
+				e.preventDefault();
+				window.location.href='http://localhost:8891/deviceinfo';
+			});
+
+			$('#network_info').on('click', function(e) {
+				e.preventDefault();
+				window.location.href='http://localhost:8891/networkinfo';
+			});
+
+			$('#model_info').on('click', function(e) {
+				e.preventDefault();
+				window.location.href='http://localhost:8891/modelinfo';
+			});
+
+			$(".hover").mouseleave(
+				function() {
+					$(this).removeClass("hover");
+				}
+			);
+		});
+	</script>
+</head>
+<body>
+	<div class="menu_bar">
+		<button id="client_info" class="menu_button">ClientInfo</button>
+		<button id="train_info" class="menu_button">TrainingInfo</button>
+		<button id="device_info" class="menu_button">DeviceInfo</button>
+		<button id="network_info" class="menu_button">NetworkInfo</button>
+		<button id="model_info" class="menu_button">ModelInfo</button>
+		<div id="wifi_info">
+			{% for key, value in WifiInfo.items() %}
+				<ul>
+					<li> WifiName : {{ key }} </li>
+					<li> WifiIP : {{ value }} </li>
+				</ul>
+			{% endfor %}
+		</div>
+		<img id="wifi_img" src="/static/images/wifi.png">
+	</div>
+	<div id="model_upload">
+		<h1> File Upload </h1>
+		<form method="POST" action="/upload_h5_weight" enctype="multipart/form-data" class="upload-btn-wrapper">
+			<p>
+				Config file : <input type="file" name="h5_file" accept=".json">
+			</p>
+			<p>
+				Weight file : <input type="file" name="weight_file" accept=".h5">
+			</p>
+			<p>
+				<button class="btn">Submit a file</button>
+				<input type="submit" value="Submit">
+			</p>
+		</form>
+		<p>
+			<img id="file_upload_img" src="/static/images/file_upload_ex.png">
+		</p>
+	</div>
+</body>

@@ -1,10 +1,12 @@
+/**********
+MainActivity
+**********/
 package com.example.test_deeplearning4j;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -29,13 +31,10 @@ import com.github.mikephil.charting.data.LineDataSet;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.nd4j.evaluation.classification.Evaluation;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -46,20 +45,10 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-//import com.example.learn.GreetingServiceGrpc;
-
-//import io.grpc.ManagedChannel;
-//import io.grpc.ManagedChannelBuilder;
-//import io.grpc.examples.helloworld.GreeterGrpc;
-//import io.grpc.examples.helloworld.HelloReply;
-//import io.grpc.examples.helloworld.HelloRequest;
 
 public class MainActivity extends AppCompatActivity {
     private EditText clientAddress;
@@ -78,41 +67,16 @@ public class MainActivity extends AppCompatActivity {
     private String responseString;
     private String return_task;
     private JSONObject response_json = null;
-    private String address = "192.168.0.108";
+    private String address = "192.168.0.104";
     private double ui_testacc = 0.0;
-    private boolean ModelBuildCheck = false;
-
-    private String grpc_addr = "192.168.0.108";
-    private String grpc_port = "50050";
-
-    // Device Info
-    private float batteryPct = 0.0f;
-    private boolean isCharging = false;
-    private float temp = 0.0f;
-    private IntentFilter intentfilter;
-    private float batteryTemp;
-    private String currentBatterytemp;
-
-    // Evaluate Info
-    private String acc_f1 = "";
 
     List<Entry> entryList = new ArrayList<>();
-
-    // grpc
-    private ManagedChannel channel;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 //        MultiDex.install(this);
-
-        // grpc managechannel
-        channel =  ManagedChannelBuilder.forAddress("192.168.0.108", 50050)
-                .usePlaintext()
-                .build();
-
 
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MODE_PRIVATE);
 
@@ -137,8 +101,6 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        intentfilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-
         preProcessBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -162,22 +124,31 @@ public class MainActivity extends AppCompatActivity {
 //                    }
 //                }
 
-                // battery_status / is_charging
-                String bsic = BatteryStatus_IsCharging();
+                // current battery status
+                IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+                Intent batteryStatus = registerReceiver(null, ifilter);
+
+                int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+
+                float batteryPct = level * 100 / (float)scale;
+
+                // Are we charging / charged?
+                int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+                boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                        status == BatteryManager.BATTERY_STATUS_FULL;
 
                 // wifi connect status
-                Boolean wc = WifiConnected();
+                ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+                boolean connected_wifi = mWifi.isConnected();
 
-                // battery temperature
-                currentBatterytemp = Temperature();
+                // memory
 
-                // cpu frequency
-                StringBuffer cf = CpuFreq();
 
                 Message msg = new Message();
                 Bundle bundle = new Bundle();
-                bundle.putString("data", "create android user " + mUsername + "\nbattery status and is charging? " + bsic + "\nwifi connected? " + wc
-                                                + "\ntemperature? " + currentBatterytemp + "\ncpu frequency? " + cf + "GHz");
+                bundle.putString("data", "create android user");
                 msg.setData(bundle);
                 handler.sendMessage(msg);
             }
@@ -192,19 +163,6 @@ public class MainActivity extends AppCompatActivity {
                 // client wake up!
                 wakeup();
                 response_json = new JSONObject(responseString);
-                if(response_json.has("state")) {
-                    do {
-                        model_version = response_json.getInt("model_version");
-                        Thread.sleep(60000);
-                        version();
-                        response_json = new JSONObject(responseString);
-                    } while (temp_modelstate.equals("WAIT"));
-
-                    currentRound = response_json.getInt("current_round");
-                    model_version = response_json.getInt("model_version");
-                }
-
-//                classmanagement();
                 // client ready!
                 oninit();
 
@@ -217,26 +175,20 @@ public class MainActivity extends AppCompatActivity {
 
                 // download model (server -> client)
                 download();
-                // first model build
-                cnn_model.buildModel("/storage/self/primary/Download/save_model");
-                acc_f1 = cnn_model.eval();
                 // First Round Training
                 response_json = new JSONObject(responseString);
                 max_train_round = response_json.getInt("max_train_round");
                 update();
 
                 response_json = new JSONObject(responseString);
-                Log.d("RESPONSE INFO", String.valueOf(response_json));
                 while(response_json.getInt("current_round") <= max_train_round) {
                     // 서버와 클라이언트 라운드 학습 스케쥴링
                     if (response_json.getString("state").equals("RESP_ARY")) { // 1 라운드의 모든 클라이언트 학습은 끝났지만 모든 라운드 학습은 하지 못함
                         download();
-                        cnn_model.buildModel("/storage/self/primary/Download/save_model");
-                        acc_f1 = cnn_model.eval();
                         update();
                     } else if (response_json.getString("state").equals("RESP_ACY")) { // 1 라운드에서 아직 다른 클라이언트가 학습을 완료하지 못함
                         do {
-                            Thread.sleep(60000);
+                            Thread.sleep(120000);
                             version();
                             response_json = new JSONObject(responseString);
                         } while (temp_modelstate.equals("WAIT"));
@@ -246,8 +198,6 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         download();
-                        cnn_model.buildModel("/storage/self/primary/Download/save_model");
-                        acc_f1 = cnn_model.eval();
                         update();
                     } else if (response_json.getString("state").equals("NEC")) {
 //                        Message msg = new Message();
@@ -287,96 +237,9 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private String BatteryStatus_IsCharging() {
-        // current battery status
-        IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-        Intent batteryStatus = registerReceiver(null, ifilter);
-
-        int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-        int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-
-        batteryPct = level * 100 / (float)scale;
-
-        // Are we charging / charged?
-        int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-        isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                status == BatteryManager.BATTERY_STATUS_FULL;
-
-        return Float.toString(batteryPct) + "," + Boolean.toString(isCharging);
-    }
-
-    private Boolean WifiConnected() {
-        // wifi connect status
-        ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-        boolean connected_wifi = mWifi.isConnected();
-
-        return connected_wifi;
-    }
-
-    private StringBuffer CpuFreq() {
-        StringBuffer sb_cur_freq = new StringBuffer();
-        String cur_freq_file = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq";
-
-        if (new File(cur_freq_file).exists()) {
-            try {
-                BufferedReader br = new BufferedReader(new FileReader(new File(cur_freq_file)));
-                String aLine;
-                while ((aLine = br.readLine()) != null)
-                    sb_cur_freq.append(Float.toString(((float)(Integer.parseInt(aLine))/1000000)) + "\n");
-
-                if (br != null)
-                    br.close();
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return sb_cur_freq;
-    }
-
-    private String Temperature() {
-        batteryTemp = (float)(MainActivity.this.registerReceiver(broadcastreceiver, intentfilter).getIntExtra(BatteryManager.EXTRA_TEMPERATURE,0))/10;
-        return Float.toString(batteryTemp);
-    }
-
-    private BroadcastReceiver broadcastreceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            batteryTemp = (float)(intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE,0))/10;
-            currentBatterytemp = batteryTemp +" "+ (char) 0x00B0 +"C";
-        }
-    };
-
-    private String ClassSize_DataSize() {
-        String class_folder_path = "/storage/self/primary/Download/data_balance/client1_train";
-        File classfile = new File(class_folder_path);
-        File[] files = classfile.listFiles();
-
-        String class_data_size_str = "";
-        int class_size = 0;
-        for(int i = 0; i < files.length; i++) {
-            if(files[i].isDirectory()) {
-                class_size++;
-                String class_name = files[i].getName();
-                long class_length = new File(class_folder_path+"/"+class_name).listFiles().length;
-                class_data_size_str += class_name + "-" + Long.toString(class_length) + "/";
-            }
-        }
-
-        return Integer.toString(class_size) + "," + class_data_size_str;
-    }
-
     private void wakeup() throws ExecutionException, InterruptedException {
-        return_task = new WakeupClientTask().execute(grpc_addr, grpc_port).get();
+        return_task = new WakeupClientTask().execute().get();
     }
-
-//    private void classmanagement() throws ExecutionException, InterruptedException {
-//        AsyncTask<Void, Integer, String> management_task = new ClassManagement().execute();
-//        return_task = management_task.get();
-//        management_task.cancel(true);
-//    }
 
     private void oninit() throws ExecutionException, InterruptedException {
         AsyncTask<Void, Integer, String> init_task = new OninitTask().execute();
@@ -452,38 +315,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    class WakeupClientTask extends AsyncTask<String, Integer, String> {
-
-
+    class WakeupClientTask extends AsyncTask<Void, Integer, String> {
         @Override
-        protected String doInBackground(String... params) {
-            String host = params[0];
-            int port = Integer.parseInt(params[1]);
-
-            String bsic = BatteryStatus_IsCharging();
-            String bat_pct = bsic.split(",")[0];
-            String charging = bsic.split(",")[1];
-            Boolean wc = WifiConnected();
-            String csds = ClassSize_DataSize();
-
+        protected String doInBackground(Void... voids) {
             // client wake up!
-//            try {
-//                channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
-//                GreeterGrpc.GreeterBlockingStub stub = GreeterGrpc.newBlockingStub(channel);
-//                HelloRequest request = HelloRequest.newBuilder().setName(message).build();
-//                HelloReply reply = stub.sayHello(request);
-//                return reply.getMessage();
-//            } catch (Exception e) {
-//                StringWriter sw = new StringWriter();
-//                PrintWriter pw = new PrintWriter(sw);
-//                e.printStackTrace(pw);
-//                pw.flush();
-//                return String.format("Failed... : %n%s", sw);
-//            }
-
             Request request = new Request.Builder()
-                    .url("http://" + address + ":8891/client_wake_up?client_name=" + mUsername + "&battery_pct=" + bat_pct + "&is_charging=" + charging
-                                                                        + "&wifi_conn=" + Boolean.toString(wc) + "&classsize_datasize=" + csds)
+                    .url("http://" + address + ":8891/client_wake_up?client_name=" + mUsername)
                     .build();
 
             try {
@@ -513,66 +350,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-//    class ClassManagement extends AsyncTask<Void, Integer, String> {
-//        @Override
-//        protected String doInBackground(Void... voids) {
-//            try {
-//                int class_length = response_json.getInt("class_size");
-//                JSONArray class_list = response_json.getJSONArray("class_list"); // server로부터 받은 class list
-//
-//                JSONArray new_class_list = class_list;
-//                String data_download_path = "/storage/self/primary/Download/data_balance/client1_train";
-//                File file = new File(data_download_path);
-//                File[] datafolder = file.listFiles();
-//                int classsize = datafolder.length;
-//
-//                // server로부터 받은 class list와 client가 가지고 있는 class list 비교
-//                for(int f = 0; f < class_length; f++) {
-//                    for(File fil : datafolder) {
-//                        if(!class_list.getString(f).endsWith(fil.getName())) {
-//                            new_class_list.put(fil.getName());
-//                            String create_path = data_download_path + "/" + fil.getName();
-//                            File Folder = new File(create_path);
-//                            if(!Folder.exists()) Folder.mkdir();
-//                        }
-//                    }
-//                }
-//
-//                int trainSize = 0;
-//                for(int i = 0; i < new_class_list.length(); i++) {
-//                    File datafile = new File(data_download_path + "/" + new_class_list.getString(i));
-//                    trainSize += datafile.listFiles().length;
-//                }
-//
-//                Request request2 = new Request.Builder()
-//                        .url("http://" + address + ":8891/class_management?client_name=" + mUsername + "&train_size=" + Integer.toString(trainSize)
-//                                + "&class_size=" + Integer.toString(classsize) + "&class_list=" + new_class_list.toString())
-//                        .build();
-//
-//                response = client.newCall(request2).execute();
-//                if (response.isSuccessful()) {
-//                    ResponseBody body = response.body();
-//                    if (body != null) {
-//                        responseString = body.string();
-//                    }
-//                }
-//                else
-//                    Log.d("INFO", "Connect Error Occurred");
-//            } catch (IOException | JSONException e) {
-//                e.printStackTrace();
-//            } finally {
-//                response.body().close();
-//            }
-//
-//            return responseString;
-//        }
-//
-//        @Override
-//        protected void onPostExecute(String result) {
-////            logArea.append("client ready \n");
-//        }
-//    }
-
     class OninitTask extends AsyncTask<Void, Integer, String> {
         @Override
         protected String doInBackground(Void... voids) {
@@ -590,26 +367,11 @@ public class MainActivity extends AppCompatActivity {
                 int class_length = response_json.getInt("class_size");
                 JSONArray class_list = response_json.getJSONArray("class_list");
 
+                cnn_model = new CNNModel();
+
                 String data_download_path = "/storage/self/primary/Download/data_balance/client1_train";
-                String test_data_download_path = "/storage/self/primary/Download/data_balance/test";
                 File file = new File(data_download_path);
                 File[] datafolder = file.listFiles();
-                File test_file = new File(test_data_download_path);
-                File[] testdatafolder = test_file.listFiles();
-
-                int classsize = datafolder.length;
-                int trainSize = 0;
-                for(int i = 0; i < classsize; i++) {
-                    File datafile = new File(data_download_path + "/" + datafolder[i].getName());
-                    trainSize += datafile.listFiles().length;
-                }
-                int testSize = 0;
-                for(int i = 0; i < classsize; i++) {
-                    File datafile = new File(test_data_download_path + "/" + testdatafolder[i].getName());
-                    testSize += datafile.listFiles().length;
-                }
-
-                cnn_model = new CNNModel(trainSize, testSize);
 
 //                File[] client_class = datafolder;
 //                for(int f = 0; f < class_length; f++) {
@@ -619,11 +381,17 @@ public class MainActivity extends AppCompatActivity {
 //                        }
 //                    }
 //                }
+                int classsize = datafolder.length;
+                int trainSize = 0;
+                for(int i = 0; i < classsize; i++) {
+                    File datafile = new File(data_download_path + "/" + datafolder[i].getName());
+                    trainSize += datafile.listFiles().length;
+                }
 
                 Request request2 = new Request.Builder()
                         .url("http://" + address + ":8891/client_ready?client_name=" + mUsername + "&train_size=" + Integer.toString(trainSize)
-                                + "&class_size=" + Integer.toString(classsize) + "&model_ver=" + model_version
-                                + "&current_round=" + Integer.toString(currentRound) + "&android_name=" + ModelName)
+                                                                + "&class_size=" + Integer.toString(classsize) + "&model_ver=" + model_version
+                                                                + "&current_round=" + Integer.toString(currentRound) + "&android_name=" + ModelName)
                         .build();
 
                 response = client.newCall(request2).execute();
@@ -671,29 +439,17 @@ public class MainActivity extends AppCompatActivity {
                 String Output_file_path = "/storage/self/primary/Download/save_model";
                 File check_file = new File(Output_file_path);
 
-                if(mVersion != model_version || mVersion == 0 || !ModelBuildCheck) {
+                if(mVersion != model_version || mVersion == 0) {
                     // model build
                     cnn_model.buildModel(Output_file_path);
-                    ModelBuildCheck = true;
                 }
 
                 ui_testacc = testAcc;
 
                 Train_time = trainOneRound(currentRound, upload_url, mVersion);
 
-                // Memory Usage
-                final Runtime runtime = Runtime.getRuntime();
-                final long usedMemInMB=(runtime.totalMemory() - runtime.freeMemory()) / 1048576L;
-                final long maxHeapSizeInMB=runtime.maxMemory() / 1048576L;
-                final long availHeapSizeInMB = maxHeapSizeInMB - usedMemInMB;
-
-                currentBatterytemp = Temperature();
-                StringBuffer cf = CpuFreq();
-
                 Request update_client_request = new Request.Builder()
-                        .url("http://" + address + ":8891/client_update?client_name=" + mUsername + "&current_round=" + Integer.toString(currentRound) + "&train_time=" + Train_time
-                                                            + "&heapsize=" + Long.toString(availHeapSizeInMB) + "&temperature=" + currentBatterytemp + "&cpu_freq=" + cf
-                                                            + "&acc_f1=" + acc_f1)
+                        .url("http://" + address + ":8891/client_update?client_name=" + mUsername + "&current_round=" + Integer.toString(currentRound))
                         .build();
 
                 response = client.newCall(update_client_request).execute();
@@ -780,7 +536,7 @@ public class MainActivity extends AppCompatActivity {
         long train_time = 0L;
         try {
             current_time = System.currentTimeMillis();
-            cnn_model.train(4);
+            cnn_model.train(10);
             train_time = System.currentTimeMillis();
             Log.d("TRAINING TIME INFO", Long.toString((train_time - current_time)/1000));
         } catch (InterruptedException e) {
@@ -803,5 +559,189 @@ public class MainActivity extends AppCompatActivity {
         cnn_model.uploadTo(AndroidModelPath + "weight_" + mUsername + ".json", upload_url, client);
 
         return Long.toString((train_time - current_time)/1000);
+    }
+}
+
+/****************
+CNNModel
+****************/
+package com.example.test_deeplearning4j;
+
+import android.util.Log;
+
+import org.datavec.api.io.labels.ParentPathLabelGenerator;
+import org.datavec.api.records.listener.impl.LogRecordListener;
+import org.datavec.api.split.FileSplit;
+import org.datavec.image.loader.NativeImageLoader;
+import org.datavec.image.recordreader.ImageRecordReader;
+import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
+import org.deeplearning4j.nn.api.Layer;
+import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
+import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
+import org.deeplearning4j.nn.conf.layers.OutputLayer;
+import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
+import org.deeplearning4j.util.ModelSerializer;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.simple.JSONObject;
+import org.nd4j.linalg.activations.Activation;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
+import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
+import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
+import org.nd4j.linalg.lossfunctions.LossFunctions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import okhttp3.OkHttpClient;
+
+public class CNNModel implements FederatedModel {
+    private static final String TAG = "CNNModel";
+    private static final int BATCH_SIZE = 64;
+    private static final int N_EPOCHS = 1;
+    private static final int rngSeed = 42;
+
+    private static final int HEIGHT = 224;
+    private static final int WIDTH = 224;
+    private static final int OUTPUT_NUM = 5;
+
+    private MultiLayerNetwork model;
+
+    private static Logger log = LoggerFactory.getLogger(CNNModel.class);
+
+    private String train_data_path = "/storage/self/primary/Download/data_balance/client1_train/";
+    private int N_SAMPLES_CLIENT1_TRAINING = 468;
+
+    private DataSetIterator AcitivityTrain;
+
+    public CNNModel() throws IOException {
+        AcitivityTrain = getDataSetIterator(train_data_path, N_SAMPLES_CLIENT1_TRAINING);
+    }
+
+    @Override
+    public void buildModel(String modelsip_path) {
+        //Load the model
+        try {
+            File modelzip = new File(modelsip_path + "/MyMultiLayerNetwork.zip");
+            model = ModelSerializer.restoreMultiLayerNetwork(modelzip);
+            MultiLayerConfiguration neural_config2 = new NeuralNetConfiguration.Builder()
+                    .list()
+                    .layer(new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
+                            .nIn(30)
+                            .nOut(5)
+                            .activation(Activation.SOFTMAX)
+                            .build())
+                    .build();
+            MultiLayerNetwork model2 = new MultiLayerNetwork(neural_config2);
+            model2.init();
+
+            INDArray para1_W = model.getOutputLayer().getParam("W");
+            INDArray para1_b = model.getOutputLayer().getParam("b");
+
+            model2.getLayer(0).setParam("W", para1_W);
+            model2.getLayer(0).setParam("b", para1_b);
+
+            Layer[] layers = new Layer[model.getnLayers()];
+            for(int i = 0; i < model.getnLayers() - 1; i++) {
+                layers[i] = model.getLayer(i);
+            }
+            layers[layers.length-1] = model2.getLayer(0);
+            model.setLayers(layers);
+            model.init();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void train(int numEpochs) throws InterruptedException {
+        Log.d(TAG, " start fit!");
+        model.fit(AcitivityTrain, numEpochs);
+    }
+
+    @Override
+    public void saveModel(String modelName) {
+        try {
+            File save_model = new File(modelName);
+            model.save(save_model);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void saveSerializeModel(String modelName) {
+        try {
+
+            int layer_length = model.getnLayers();
+            JSONObject para_json = new JSONObject();
+            for(int i = 0; i < layer_length; i++) {
+                if(model.getLayer(i).getParam("W") != null) {
+                    // 1. W param
+                    JSONArray data_W = new JSONArray();
+                    INDArray param_w = model.getLayer(i).getParam("W");
+                    long[] param_shape_w = param_w.shape();
+
+                    int total_size = 1;
+                    for(int j = 0; j < param_shape_w.length; j++) {
+                        total_size *= param_shape_w[j];
+                    }
+                    INDArray reshape_param = param_w.reshape(1, total_size);
+                    for (int k = 0; k < reshape_param.getRow(0).length(); k++) {
+                        data_W.put(reshape_param.getRow(0).getFloat(k));
+                    }
+
+                    // 2. b param
+                    JSONArray data_b = new JSONArray();
+                    INDArray param_b = model.getLayer(i).getParam("b");
+
+                    for (int k = 0; k < param_b.columns(); k++) {
+                        data_b.put(param_b.getRow(0).getFloat(k));
+                    }
+
+                    para_json.put(Integer.toString(i) + "_W", data_W);
+                    para_json.put(Integer.toString(i) + "_b", data_b);
+                }
+            }
+
+            FileWriter file = new FileWriter("/storage/self/primary/Download/save_weight/" + modelName);
+            file.write(para_json.toJSONString());
+            file.flush();
+            file.close();
+        } catch (IOException | JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void uploadTo(String upload_path, String upload_url, OkHttpClient client) throws IOException {
+        File tempSelectFile = new File(upload_path);
+        FileUploadUtils.goSend(tempSelectFile, upload_url, client);
+    }
+
+    @Override
+    public DataSetIterator getDataSetIterator(String folderPath, int nSamples) throws IOException {
+        File train_data = new File(folderPath);
+        FileSplit train = new FileSplit(train_data, NativeImageLoader.ALLOWED_FORMATS, new Random(123));
+        ParentPathLabelGenerator labelMaker = new ParentPathLabelGenerator();
+        ImageRecordReader recordReader = new ImageRecordReader(112, 112, 3, labelMaker);
+
+        recordReader.initialize(train);
+        recordReader.setListeners(new LogRecordListener());
+
+        DataSetIterator dataIter = new RecordReaderDataSetIterator(recordReader, 16, 1, 5);
+
+        DataNormalization scaler = new ImagePreProcessingScaler(0, 1);
+        scaler.fit(dataIter);
+        dataIter.setPreProcessor(scaler);
+
+        return dataIter;
     }
 }

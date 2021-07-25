@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title> FL Dashboard Train Page </title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+	<link rel="stylesheet" type="text/css" href="../static/css/DeviceStyle.css">
+
+	<script type="text/javascript" src="//code.jquery.com/jquery.min.js"></script>
+	<script src="../static/js/DeviceScript.js"></script>
+	<script>
+	function draw_heapsize_chart() {
+		var ctx = document.getElementById('heapsize');
+		var heapsize_data = {
+			labels: {{ RoundLabel }},
+			datasets: {{ TrainModelHeapSize | tojson }}
+		};
+		var config = {
+				type: 'line',
+				data: heapsize_data,
+				options: {
+						maintainAspectRatio: false,
+						title: {
+								text: 'Client device heap size by round'
+						},
+						scales: {
+								xAxes: [{
+										scaleLabel: {
+												display: true,
+												labelString: 'Round'
+										}
+								}],
+								yAxes: [{
+										ticks: {
+											beginAtZero: true
+										},
+										scaleLabel: {
+												display: true,
+												labelString: 'Heap Size (MB)'
+										}
+								}]
+						}
+				}
+		};
+
+		var HeapSizeChart = new Chart(ctx, config);
+	}
+
+	function draw_temperature_chart() {
+		var ctx = document.getElementById('temperature');
+		var temperature_data = {
+			labels: {{ RoundLabel }},
+			datasets: {{ TrainModelTemperature | tojson }}
+		};
+		var config = {
+				type: 'line',
+				data: temperature_data,
+				options: {
+						maintainAspectRatio: false,
+						title: {
+								text: 'Client device temperature by round'
+						},
+						scales: {
+								xAxes: [{
+										scaleLabel: {
+												display: true,
+												labelString: 'Round'
+										}
+								}],
+								yAxes: [{
+										ticks: {
+											beginAtZero: true
+										},
+										scaleLabel: {
+												display: true,
+												labelString: 'Temperature (℃ )'
+										}
+								}]
+						}
+				}
+		};
+
+		var TemperatureChart = new Chart(ctx, config);
+	}
+
+	function draw_cpu_freq_chart() {
+		var ctx = document.getElementById('cpu_freq');
+		var cpu_freq_data = {
+			labels: {{ RoundLabel }},
+			datasets: {{ TrainModelCPUFrequency | tojson }}
+		};
+		var config = {
+				type: 'line',
+				data: cpu_freq_data,
+				options: {
+						maintainAspectRatio: false,
+						title: {
+								text: 'Client device cpu frequency by round'
+						},
+						scales: {
+								xAxes: [{
+										scaleLabel: {
+												display: true,
+												labelString: 'Round'
+										}
+								}],
+								yAxes: [{
+										ticks: {
+											beginAtZero: true
+										},
+										scaleLabel: {
+												display: true,
+												labelString: 'CPU Frequency (GHz)'
+										}
+								}]
+						}
+				}
+		};
+
+		var CPUFrequencyChart = new Chart(ctx, config);
+	}
+	</script>
+</head>
+<body>
+	<div class="menu_bar">
+		<button id="client_info" class="menu_button">ClientInfo</button>
+		<button id="train_info" class="menu_button">TrainingInfo</button>
+		<button id="device_info" class="menu_button">DeviceInfo</button>
+		<button id="network_info" class="menu_button">NetworkInfo</button>
+		<button id="model_info" class="menu_button">ModelInfo</button>
+		<div id="wifi_info">
+			{% for key, value in WifiInfo.items() %}
+				<ul>
+					<li> WifiName : {{ key }} </li>
+					<li> WifiIP : {{ value }} </li>
+				</ul>
+			{% endfor %}
+		</div>
+		<img id="wifi_img" src="/static/images/wifi.png">
+	</div>
+	<div class="device_info">
+		<div id="heapsize_div">
+			<h3> Client Model Heap Size Line Chart </h3>
+			<canvas id="heapsize" height="200"></canvas>
+		</div>
+		<div id="temperature_div">
+			<h3> Client Temperature Bar Chart </h3>
+			<canvas id="temperature" height="200"></canvas>
+		</div>
+		<div id="cpu_freq_div">
+			<h3> Client CPU Frequency Line Chart </h3>
+			<canvas id="cpu_freq" height="200"></canvas>
+		</div>
+	</div>
+
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.js"></script>
+</body>

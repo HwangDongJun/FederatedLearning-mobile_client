@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title> FL Dashboard Main Page </title>
+	<meta charset="UTF-8">
+	<meta http-equiv="Pragma" content="no-cache">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+	<link rel="stylesheet" type="text/css" href="../static/css/MainStyle.css">
+
+	<script type="text/javascript" src="//code.jquery.com/jquery.min.js"></script>
+	<script src="../static/js/MainScript.js"></script>
+</head>
+<body>
+	<div class="menu_bar">
+		<button id="client_info" class="menu_button">ClientInfo</button>
+		<button id="train_info" class="menu_button">TrainingInfo</button>
+		<button id="device_info" class="menu_button">DeviceInfo</button>
+		<button id="network_info" class="menu_button">NetworkInfo</button>
+		<button id="model_info" class="menu_button">ModelInfo</button>
+		<div id="wifi_info">
+			{% for key, value in WifiInfo.items() %}
+				<ul>
+					<li> WifiName : {{ key }} </li>
+					<li> WifiIP : {{ value }} </li>
+				</ul>
+			{% endfor %}
+		</div>
+		<img id="wifi_img" src="/static/images/wifi.png">
+	</div>
+	<div class="client_info">
+		<div>
+			<input type="image" id="restart" alt="repage" src="/static/images/restart.png">
+			<img id="status_pan" src="/static/images/status/statuspan.png">
+		</div>
+		<div class="count_status">
+			<div class="dashbord dashboard-green">
+				<small> ON CLIENT </small>
+				<p class="CountArea"> {{ CountList[3] }} </p>
+			</div>
+			<div class="dashbord dashbord-red">
+				<small>OFF CLIENT </small>
+				<p class="CountArea"> {{ CountList[4] }} </p>
+			</div>
+			<div class="dashbord dashbord-purple">
+				<small> TRAIN CLIENT </small>
+				<p class="CountArea"> {{ CountList[2] }} </p>
+			</div>
+			<div class="dashbord dashbord-yellow">
+				<small> WAIT CLIENT </small>
+				<p class="CountArea"> {{ CountList[1] }} </p>
+			</div>
+			<div class="dashbord dashbord-skyblue">
+				<small> BRAEK IN CLIENT </small>
+				<p class="CountArea"> {{ CountList[0] }} </p>
+			</div>
+		</div>
+		
+		<table>
+			<thead>
+				<tr>
+					<th> ClientName </th><th> AndroidDevice </th><th> TrainSize </th><th> ClassSize </th><th> Role </th><th> Status </th><th> Command </th>
+			</thead>
+			<tbody>
+				{% for key, value in ClientInfo.items() %}
+					<tr class="android_value">
+						<td> {% if value[4] > 75.0 %}
+								{% if value[5] == "true" %}
+									<img class="battery" src="../static/images/battery/100bc.png">
+								{% else %}
+									<img class="battery" src="../static/images/battery/100b.png">
+								{% endif %}
+							 {% elif (value[4] <= 75.0) and (value[4] > 50.0) %}
+							 	{% if value[5] == "true" %}
+									<img class="battery" src="../static/images/battery/75bc.png">
+								{% else %}
+									<img class="battery" src="../static/images/battery/75b.png">
+								{% endif %}
+							 {% elif (value[4] <= 50.0) and (value[4] > 25.0) %}
+							 	{% if value[5] == "true" %}
+									<img class="battery" src="../static/images/battery/50bc.png">
+								{% else %}
+									<img class="battery" src="../static/images/battery/50b.png">
+								{% endif %}
+							 {% elif value[5] <= 25.0 %}
+							 	{% if value[5] == "true" %}
+									<img class="battery" src="../static/images/battery/25bc.png">
+								{% else %}
+									<img class="battery" src="../static/images/battery/25b.png">
+								{% endif %}
+							 {% endif %}
+							 {{ key }} </td>
+						<td> {{ value[0] }} </td>
+						<td> {{ value[1] }} </td>
+						<td> {{ value[2] }} </td>
+						<td> client </td>
+						<td> {% if value[3] == "on" %}
+								<img class="status_circle" src="../static/images/status/on.png">
+							 {% elif value[3] == "off" %}
+								<img class="status_circle" src="../static/images/status/off.png">
+							 {% elif value[3] == "wait" %}
+								<img class="status_circle" src="../static/images/status/waiting.png">
+							 {% elif value[3] == "train" %}
+								<img class="status_circle" src="../static/images/status/training.png">
+							 {% elif value[3] == "participate" %}
+							 	<img class="status_circle" src="../static/images/status/breakin.png">
+							 {% endif %}
+						</td>
+						<td> <input type="image" id="delete" alt="trash" name="{{ key }}" src="../static/images/trash.png"> </td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+</body>

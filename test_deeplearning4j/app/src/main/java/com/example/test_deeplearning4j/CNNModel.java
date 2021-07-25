@@ -8,6 +8,7 @@ import org.datavec.api.split.FileSplit;
 import org.datavec.image.loader.NativeImageLoader;
 import org.datavec.image.recordreader.ImageRecordReader;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
+import org.deeplearning4j.datasets.iterator.impl.ListDataSetIterator;
 import org.deeplearning4j.nn.api.Layer;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -17,11 +18,14 @@ import org.deeplearning4j.util.ModelSerializer;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.simple.JSONObject;
+import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +33,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,12 +56,14 @@ public class CNNModel implements FederatedModel {
     private static Logger log = LoggerFactory.getLogger(CNNModel.class);
 
     private String train_data_path = "/storage/self/primary/Download/data_balance/client1_train/";
-    private int N_SAMPLES_CLIENT1_TRAINING = 468;
+    private String test_data_path = "/storage/self/primary/Download/data_balance/test/";
 
     private DataSetIterator AcitivityTrain;
+    private DataSetIterator AcitivityTest;
 
-    public CNNModel() throws IOException {
-        AcitivityTrain = getDataSetIterator(train_data_path, N_SAMPLES_CLIENT1_TRAINING);
+    public CNNModel(int N_SAMPLES_CLIENT_TRAINING, int N_SAMPLE_CLIENT_TEST) throws IOException {
+        AcitivityTrain = getDataSetIterator(train_data_path, N_SAMPLES_CLIENT_TRAINING);
+        AcitivityTest = getTestDataSetIterator(test_data_path, N_SAMPLE_CLIENT_TEST);
     }
 
     @Override
@@ -97,6 +105,12 @@ public class CNNModel implements FederatedModel {
     public void train(int numEpochs) throws InterruptedException {
         Log.d(TAG, " start fit!");
         model.fit(AcitivityTrain, numEpochs);
+    }
+
+    @Override
+    public String eval() {
+        Evaluation model_eval = model.evaluate(AcitivityTest);
+        return Double.toString(model_eval.accuracy()) + "," + Double.toString(model_eval.f1());
     }
 
     @Override
@@ -164,7 +178,7 @@ public class CNNModel implements FederatedModel {
         File train_data = new File(folderPath);
         FileSplit train = new FileSplit(train_data, NativeImageLoader.ALLOWED_FORMATS, new Random(123));
         ParentPathLabelGenerator labelMaker = new ParentPathLabelGenerator();
-        ImageRecordReader recordReader = new ImageRecordReader(224, 224, 3, labelMaker);
+        ImageRecordReader recordReader = new ImageRecordReader(112, 112, 3, labelMaker);
 
         recordReader.initialize(train);
         recordReader.setListeners(new LogRecordListener());
@@ -176,5 +190,65 @@ public class CNNModel implements FederatedModel {
         dataIter.setPreProcessor(scaler);
 
         return dataIter;
+    }
+
+    private static DataSetIterator getTestDataSetIterator(String folderPath, int nSamples) throws IOException {
+        File folder = new File(folderPath);
+        File[] digitFolders = folder.listFiles();
+
+        NativeImageLoader nil = new NativeImageLoader(112, 112, 3);
+        ImagePreProcessingScaler scaler = new ImagePreProcessingScaler(0,1);
+
+        INDArray input = Nd4j.create(new int[]{ nSamples, 3, 112, 112 });
+        INDArray output = Nd4j.create(new int[]{ nSamples, 5 });
+
+        int n = 0;
+        //scan all 0..9 digit subfolders
+        for (File digitFolder : digitFolders) {
+            //take note of the digit in processing, since it will be used as a label
+            int labelDigit = 0;
+            String file_digit = digitFolder.getName();
+            if(file_digit.equals("book")) {
+                labelDigit = 0;
+            } else if(file_digit.equals("laptop")) {
+                labelDigit = 1;
+            } else if(file_digit.equals("phone")) {
+                labelDigit = 2;
+            } else if(file_digit.equals("wash")) {
+                labelDigit = 3;
+            } else if(file_digit.equals("water")) {
+                labelDigit = 4;
+            }
+            //scan all the images of the digit in processing
+            File[] imageFiles = digitFolder.listFiles();
+            for (File imageFile : imageFiles) {
+                //read the image as a one dimensional array of 0..255 values
+//				INDArray img = nil.asRowVector(imageFile);
+                INDArray img = nil.asMatrix(imageFile);
+                log.info(img.shapeInfoToString());
+                //scale the 0..255 integer values into a 0..1 floating range
+                //Note that the transform() method returns void, since it updates its input array
+                scaler.transform(img);
+                //copy the img array into the input matrix, in the next row
+                input.putRow( n, img );
+                //in the same row of the output matrix, fire (set to 1 value) the column correspondent to the label
+                output.put( n, labelDigit, 1.0 );
+                //row counter increment
+                n++;
+                log.info(labelDigit+" \t "+n);
+            }
+        }
+
+        //Join input and output matrixes into a dataset
+        DataSet dataSet = new DataSet( input, output );
+        //Convert the dataset into a list
+        List<DataSet> listDataSet = dataSet.asList();
+        //Shuffle its content randomly
+        Collections.shuffle( listDataSet, new Random(System.currentTimeMillis()) );
+        //Set a batch size
+        int batchSize = 32;
+        //Build and return a dataset iterator that the network can use
+        DataSetIterator dsi = new ListDataSetIterator<DataSet>( listDataSet, batchSize );
+        return dsi;
     }
 }

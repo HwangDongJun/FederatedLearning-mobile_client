@@ -98,6 +98,8 @@ dependencies {
     implementation group: 'org.bytedeco', name: 'leptonica', version: '1.78.0-1.5', classifier: "android-x86"
     implementation group: 'org.bytedeco', name: 'leptonica', version: '1.78.0-1.5', classifier: "android-x86_64"
 
+
+
 //    implementation group: 'org.nd4j', name: 'nd4j-native', version: '1.0.0-beta7'
 //    implementation group: 'org.nd4j', name: 'nd4j-native-platform', version: '1.0.0-beta7'
 //    implementation group: 'org.deeplearning4j', name: 'deeplearning4j-core', version: '1.0.0-beta7'

@@ -1,5 +1,6 @@
 package com.example.test_deeplearning4j;
 
+import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 
 import java.io.IOException;
@@ -12,6 +13,8 @@ public interface FederatedModel {
 
     // void train(TrainerDataSource trainerDataSource);
     void train(int numEpochs) throws InterruptedException;
+
+    String eval();
 
     void saveModel(String modelName);
 

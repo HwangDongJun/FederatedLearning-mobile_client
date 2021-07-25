@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title> FL Dashboard Network Page </title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+	<link rel="stylesheet" type="text/css" href="../static/css/DeviceStyle.css">
+
+	<script type="text/javascript" src="//code.jquery.com/jquery.min.js"></script>
+	<script src="../static/js/NetworkScript.js"></script>
+	<script>
+	</script>
+</head>
+<body>
+	<div class="menu_bar">
+		<button id="client_info" class="menu_button">ClientInfo</button>
+		<button id="train_info" class="menu_button">TrainingInfo</button>
+		<button id="device_info" class="menu_button">DeviceInfo</button>
+		<button id="network_info" class="menu_button">NetworkInfo</button>
+		<button id="model_info" class="menu_button">ModelInfo</button>
+		<div id="wifi_info">
+			{% for key, value in WifiInfo.items() %}
+				<ul>
+					<li> WifiName : {{ key }} </li>
+					<li> WifiIP : {{ value }} </li>
+				</ul>
+			{% endfor %}
+		</div>
+		<img id="wifi_img" src="/static/images/wifi.png">
+	</div>
+	<div class="network_info">
+	</div>
+
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.js"></script>
+</body>

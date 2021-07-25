@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title> FL Dashboard Train Page </title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+	<link rel="stylesheet" type="text/css" href="../static/css/TrainStyle.css">
+
+	<script type="text/javascript" src="//code.jquery.com/jquery.min.js"></script>
+	<script src="../static/js/TrainScript.js"></script>
+	<script>
+	function draw_acc_chart() {
+		var ctx = document.getElementById('accuracy');
+		var acc_data = {
+			labels: {{ RoundLabel }},
+			datasets: {{ TrainModelAcc | tojson }}
+		};
+		var config = {
+				type: 'line',
+				data: acc_data,
+				options: {
+						maintainAspectRatio: false,
+						title: {
+								text: 'Model accuracy by round'
+						},
+						scales: {
+								xAxes: [{
+										scaleLabel: {
+												display: true,
+												labelString: 'Round'
+										}
+								}],
+								yAxes: [{
+										ticks: {
+											beginAtZero: true
+										},
+										scaleLabel: {
+												display: true,
+												labelString: 'Accuracy'
+										}
+								}]
+						}
+				}
+		};
+
+		var AccuracyChart = new Chart(ctx, config);
+	}
+
+	function draw_f1_chart() {
+		var ctx = document.getElementById('f1_score');
+		var f1_data = {
+				labels: {{ RoundLabel }},
+			datasets: {{ TrainModelF1 | tojson }}
+		};
+		var config = {
+				type: 'line',
+				data: f1_data,
+				options: {
+						maintainAspectRatio: false,
+							title: {
+								text: 'Model f1 score by round'
+						},
+						scales: {
+								xAxes: [{
+										scaleLabel: {
+												display: true,
+												labelString: 'Round'
+										}
+								}],
+								yAxes: [{
+										ticks: {
+											beginAtZero: true
+											},
+									scaleLabel: {
+												display: true,
+												labelString: 'f1 score'
+										}
+								}]
+						}
+				}
+		};
+
+		var F1ScoreChart = new Chart(ctx, config);
+	}
+
+	function draw_trainingtime_chart() {
+		var ctx = document.getElementById('trainingtime');
+		var trinaingtime_data = {
+			labels: {{ RoundLabel }},
+			datasets: {{ TrainModelTrainingTime | tojson }}
+		};
+		var config = {
+				type: 'line',
+				data: trinaingtime_data,
+				options: {
+						maintainAspectRatio: false,
+						title: {
+								text: 'Model training time by round'
+						},
+						scales: {
+								xAxes: [{
+										scaleLabel: {
+												display: true,
+												labelString: 'Round'
+										}
+								}],
+								yAxes: [{
+										ticks: {
+											beginAtZero: true
+										},
+										scaleLabel: {
+												display: true,
+												labelString: 'Training Time (s)'
+										}
+								}]
+						}
+				}
+		};
+
+		var TrainingTimeChart = new Chart(ctx, config);
+	}
+
+	function draw_clientclass_chart() {
+		var ctx = document.getElementById('clientclass');
+		var config = {
+			type: 'doughnut',
+			data: {{ ClientClass[0] | tojson }},
+			options: {
+				responsive: true,
+				plugins: {
+					legend: {
+						position: 'top',
+					}
+				}
+			}
+		};
+
+		var ClientClassChart = new Chart(ctx, config);
+	}
+	</script>
+</head>
+<body>
+	<div class="menu_bar">
+		<button id="client_info" class="menu_button">ClientInfo</button>
+		<button id="train_info" class="menu_button">TrainingInfo</button>
+		<button id="device_info" class="menu_button">DeviceInfo</button>
+		<button id="network_info" class="menu_button">NetworkInfo</button>
+		<button id="model_info" class="menu_button">ModelInfo</button>
+		<div id="wifi_info">
+			{% for key, value in WifiInfo.items() %}
+				<ul>
+					<li> WifiName : {{ key }} </li>
+					<li> WifiIP : {{ value }} </li>
+				</ul>
+			{% endfor %}
+		</div>
+		<img id="wifi_img" src="/static/images/wifi.png">
+	</div>
+	<div class="train_info">
+		<div id="accuracy_div">
+			<h3> Client Model Accuracy Line Chart </h3>
+			<canvas id="accuracy" height="200"></canvas>
+		</div>
+		<div id="f1_div">
+			<h3> Client Model F1 Score Line Chart </h3>
+			<canvas id="f1_score" height="200"></canvas>
+		</div>
+		<div id="trainingtime_div">
+			<h3> Client Model Trainging Time Line Chart </h3>
+			<canvas id="trainingtime" height="200"></canvas>
+		</div>
+		<div id="clientclass_div">
+			<h3> Client Class Size Doughnut Chart </h3>
+			<canvas id="clientclass" height="200"></canvas>
+		</div>
+	</div>
+
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.js"></script>
+</body>

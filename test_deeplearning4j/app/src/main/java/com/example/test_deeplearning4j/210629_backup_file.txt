@@ -46,20 +46,10 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-//import com.example.learn.GreetingServiceGrpc;
-
-//import io.grpc.ManagedChannel;
-//import io.grpc.ManagedChannelBuilder;
-//import io.grpc.examples.helloworld.GreeterGrpc;
-//import io.grpc.examples.helloworld.HelloReply;
-//import io.grpc.examples.helloworld.HelloRequest;
 
 public class MainActivity extends AppCompatActivity {
     private EditText clientAddress;
@@ -78,12 +68,9 @@ public class MainActivity extends AppCompatActivity {
     private String responseString;
     private String return_task;
     private JSONObject response_json = null;
-    private String address = "192.168.0.108";
+    private String address = "192.168.0.107";
     private double ui_testacc = 0.0;
     private boolean ModelBuildCheck = false;
-
-    private String grpc_addr = "192.168.0.108";
-    private String grpc_port = "50050";
 
     // Device Info
     private float batteryPct = 0.0f;
@@ -98,21 +85,11 @@ public class MainActivity extends AppCompatActivity {
 
     List<Entry> entryList = new ArrayList<>();
 
-    // grpc
-    private ManagedChannel channel;
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 //        MultiDex.install(this);
-
-        // grpc managechannel
-        channel =  ManagedChannelBuilder.forAddress("192.168.0.108", 50050)
-                .usePlaintext()
-                .build();
-
 
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MODE_PRIVATE);
 
@@ -369,7 +346,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void wakeup() throws ExecutionException, InterruptedException {
-        return_task = new WakeupClientTask().execute(grpc_addr, grpc_port).get();
+        return_task = new WakeupClientTask().execute().get();
     }
 
 //    private void classmanagement() throws ExecutionException, InterruptedException {
@@ -452,14 +429,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    class WakeupClientTask extends AsyncTask<String, Integer, String> {
-
-
+    class WakeupClientTask extends AsyncTask<Void, Integer, String> {
         @Override
-        protected String doInBackground(String... params) {
-            String host = params[0];
-            int port = Integer.parseInt(params[1]);
-
+        protected String doInBackground(Void... voids) {
             String bsic = BatteryStatus_IsCharging();
             String bat_pct = bsic.split(",")[0];
             String charging = bsic.split(",")[1];
@@ -467,20 +439,6 @@ public class MainActivity extends AppCompatActivity {
             String csds = ClassSize_DataSize();
 
             // client wake up!
-//            try {
-//                channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
-//                GreeterGrpc.GreeterBlockingStub stub = GreeterGrpc.newBlockingStub(channel);
-//                HelloRequest request = HelloRequest.newBuilder().setName(message).build();
-//                HelloReply reply = stub.sayHello(request);
-//                return reply.getMessage();
-//            } catch (Exception e) {
-//                StringWriter sw = new StringWriter();
-//                PrintWriter pw = new PrintWriter(sw);
-//                e.printStackTrace(pw);
-//                pw.flush();
-//                return String.format("Failed... : %n%s", sw);
-//            }
-
             Request request = new Request.Builder()
                     .url("http://" + address + ":8891/client_wake_up?client_name=" + mUsername + "&battery_pct=" + bat_pct + "&is_charging=" + charging
                                                                         + "&wifi_conn=" + Boolean.toString(wc) + "&classsize_datasize=" + csds)
