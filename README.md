@@ -10,4 +10,4 @@
 
 ![round training scheduling](./img/1round->2round.png)
 
-- gRPC로도 구현을 해보고 싶다... 
+- [gRPC 프로토콜을 사용한 연합 학습 방식 구현](https://github.com/HwangDongJun/FederatedLearning-gRPC)
